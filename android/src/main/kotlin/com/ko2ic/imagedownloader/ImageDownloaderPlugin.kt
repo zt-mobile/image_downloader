@@ -26,7 +26,6 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.PluginRegistry.Registrar
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -36,17 +35,6 @@ import java.util.*
 
 class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     companion object {
-        @JvmStatic
-        fun registerWith(registrar: Registrar) {
-            val activity = registrar.activity() ?: return
-            val context = registrar.context()
-            val applicationContext = context.applicationContext
-            val pluginInstance = ImageDownloaderPlugin()
-            pluginInstance.setup(
-                registrar.messenger(), applicationContext, activity, registrar, null
-            )
-        }
-
         private const val CHANNEL = "plugins.ko2ic.com/image_downloader"
         private const val LOGGER_TAG = "image_downloader"
     }
@@ -71,7 +59,6 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             pluginBinding.binaryMessenger,
             pluginBinding.applicationContext,
             activityPluginBinding.activity,
-            null,
             activityPluginBinding
         )
     }
@@ -92,7 +79,6 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         messenger: BinaryMessenger,
         applicationContext: Context,
         activity: Activity,
-        registrar: Registrar?,
         activityBinding: ActivityPluginBinding?
     ) {
         this.applicationContext = applicationContext
@@ -100,14 +86,8 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         channel.setMethodCallHandler(this)
         permissionListener = ImageDownloaderPermissionListener(activity)
 
-        if (registrar != null) {
-            // V1 embedding setup for activity listeners.
-            registrar.addRequestPermissionsResultListener(permissionListener)
-        } else {
-            // V2 embedding setup for activity listeners.
-            this.activityBinding = activityBinding
-            this.activityBinding?.addRequestPermissionsResultListener(permissionListener)
-        }
+        this.activityBinding = activityBinding
+        this.activityBinding?.addRequestPermissionsResultListener(permissionListener)
     }
 
     private fun tearDown() {
@@ -322,8 +302,6 @@ class ImageDownloaderPlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 when (it) {
                     is Downloader.DownloadStatus.Failed -> Log.d(LOGGER_TAG, it.reason)
                     is Downloader.DownloadStatus.Paused -> Log.d(LOGGER_TAG, it.reason)
-                    is Downloader.DownloadStatus.Pending -> {}
-                    is Downloader.DownloadStatus.Successful -> {}
                     is Downloader.DownloadStatus.Running -> {
                         Log.d(LOGGER_TAG, it.progress.toString())
                         val args = HashMap<String, Any>()
